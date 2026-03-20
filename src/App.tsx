@@ -40,7 +40,7 @@ const LANGUAGES = [
 ];
 
 const OUTPUT_LANGUAGES = [
-  'English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Korean', 'Khmer', 'Vietnamese',
+  'English', 'Khmer'
 ];
 
 interface Project {
@@ -209,7 +209,7 @@ export default function App() {
   };
 
   const clearHistory = () => {
-    if (confirm('Are you sure you want to permanently delete all saved explanations?')) {
+    if (confirm('Are you sure you want to permanently delete all saved history?')) {
        setProjects([]);
        localStorage.removeItem('ccai_history');
     }
@@ -458,7 +458,7 @@ export default function App() {
             {[
               { id: 'home', label: 'Home', icon: Home },
               { id: 'project', label: 'Code Explainer', icon: Code2 },
-              { id: 'history', label: 'Saved Explanations', icon: History },
+              { id: 'history', label: 'History', icon: History },
             ].map((item) => (
               <button
                 key={item.id}
@@ -538,7 +538,7 @@ export default function App() {
                 {[
                   { label: 'Home', icon: Home, onClick: () => { setMainView('home'); setIsMenuOpen(false); }, active: mainView === 'home' },
                   { label: 'Code Explainer', icon: Code2, onClick: () => { setMainView('project'); setIsMenuOpen(false); }, active: mainView === 'project' },
-                  { label: 'Saved Explanations', icon: History, onClick: () => { setMainView('history'); setIsMenuOpen(false); }, active: mainView === 'history' },
+                  { label: 'History', icon: History, onClick: () => { setMainView('history'); setIsMenuOpen(false); }, active: mainView === 'history' },
                 ].map((item) => (
                   <button
                     key={item.label}
@@ -833,7 +833,7 @@ export default function App() {
                   <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-6">
                     <History className="w-8 h-8 text-emerald-500" />
                   </div>
-                  <h3 className="text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-white">No Saved Explanations</h3>
+                  <h3 className="text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-white">No History Yet</h3>
                   <p className="text-zinc-500 text-sm font-medium">Start explaining code to build your history locally.</p>
                 </div>
               ) : (

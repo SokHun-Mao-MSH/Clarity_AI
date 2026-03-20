@@ -29,7 +29,8 @@ async function startServer() {
         return res.status(400).json({ error: "Input code is required" });
       }
 
-      const prompt = `Act as an expert software engineer and helpful teacher. 
+      const prompt = `You are a helpful AI code assistant. Do not introduce yourself. Dive straight into the explanation.
+Keep your response concise, but make sure the explanation is extremely clear, easy to understand, and well-structured.
 The user provided code in ${language}.
 Action requested: ${actionType}.
 Provide the response exclusively in ${outputLanguage}.

@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "gen-lang-client-0248543461"
-  }
+    "default": "clarity-cddb8",
+    "clarity_ai": "clarity-cddb8"
+  },
+  "targets": {},
+  "etags": {}
 }
