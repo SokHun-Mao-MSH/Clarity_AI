@@ -25,7 +25,8 @@ import {
   ArrowRight,
   Globe2,
   Settings2,
-  Trash
+  Trash,
+  Image as ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from "./utils";
@@ -153,6 +154,10 @@ export default function App() {
   
   const [mainView, setMainView] = useState<'home' | 'project' | 'history' | 'settings'>('home');
   
+  // Vision States
+  const [selectedImage, setSelectedImage] = useState<{ data: string; mimeType: string } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
@@ -267,6 +272,8 @@ export default function App() {
           language,
           outputLanguage,
           actionType,
+          imageData: selectedImage?.data,
+          mimeType: selectedImage?.mimeType
         }),
       });
 
@@ -343,6 +350,41 @@ export default function App() {
         handleNewProject();
       }
     }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage({
+          data: (reader.result as string).split(',')[1],
+          mimeType: file.type
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage({
+          data: (reader.result as string).split(',')[1],
+          mimeType: file.type
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
   };
 
 
@@ -456,7 +498,7 @@ export default function App() {
                   transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                   className="font-black text-lg sm:text-xl md:text-2xl tracking-tighter text-zinc-900 dark:text-white leading-none uppercase truncate"
                 >
-                  Code Clarity
+                  Code Clarity 
                 </motion.span>
                 <span className="text-[10px] md:text-xs text-emerald-500 font-black mt-1 uppercase tracking-[0.2em]">
                   AI Assistant
@@ -679,71 +721,142 @@ export default function App() {
               {/* Left Column: Input Panel */}
               <div className="space-y-6 lg:sticky lg:top-20 min-w-0">
                 <div className="card-enterprise p-4 md:p-5 space-y-4 border-zinc-200/50 dark:border-white/5 shadow-enterprise-lg h-[60vh] md:h-[80vh] flex flex-col">
-                  {/* Settings Bar */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                     <div className="space-y-2">
-                       <label className="text-xs font-black text-zinc-400 uppercase tracking-widest hidden md:block">Snippet Name</label>
+                  {/* Settings Bar - Row 1: Configuration */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pb-2">
+                     <div className="sm:col-span-2 space-y-2 group/field">
+                       <label className="text-[10px] md:text-xs font-black text-zinc-400 group-hover/field:text-emerald-500 uppercase tracking-widest block transition-colors">Snippet Title</label>
                         <input 
                           type="text"
                           value={projectName}
                           onChange={(e) => setProjectName(e.target.value)}
-                          placeholder="Untitled Snippet"
-                          className="input-enterprise w-full bg-zinc-50/50 dark:bg-black/20 border-zinc-200/50 dark:border-white/5 font-bold text-xs p-3 rounded-lg"
+                          placeholder="New Analysis"
+                          className="input-enterprise w-full bg-zinc-50/50 dark:bg-black/20 border-zinc-200/50 dark:border-white/5 font-bold text-xs p-3 rounded-lg h-[42px] focus:border-emerald-500/50 transition-all outline-none"
                         />
                      </div>
                      <div className="space-y-2">
-                        <label className="text-xs font-black text-zinc-400 uppercase tracking-widest hidden md:block">Code Language</label>
+                        <label className="text-[10px] md:text-xs font-black text-zinc-400 uppercase tracking-widest block text-left">Language</label>
                         <CustomDropdown 
                           value={language}
                           options={LANGUAGES}
                           onChange={(val) => setLanguage(val)}
-                          icon={FileCode}
                         />
                      </div>
                      <div className="space-y-2">
-                        <label className="text-xs font-black text-zinc-400 uppercase tracking-widest hidden md:block">Output Language</label>
+                        <label className="text-[10px] md:text-xs font-black text-zinc-400 uppercase tracking-widest block text-left">Output</label>
                         <CustomDropdown 
                           value={outputLanguage}
                           options={OUTPUT_LANGUAGES}
                           onChange={(val) => setOutputLanguage(val)}
-                          icon={Globe2}
                         />
                      </div>
                   </div>
 
-                  {/* Code textarea Container (MVP Mode) */}
-                  <div className="flex-1 rounded-[1rem] md:rounded-[1.5rem] overflow-hidden border border-zinc-200/50 dark:border-white/10 relative mt-2 bg-white dark:bg-[#1e1e1e]">
-                        <textarea
-                          className="w-full h-full p-4 md:p-6 text-sm font-['JetBrains_Mono','Fira_Code',monospace] bg-transparent text-zinc-900 dark:text-zinc-100 resize-none outline-none custom-scrollbar leading-relaxed"
-                          value={inputCode}
-                          onChange={(e) => setInputCode(e.target.value)}
-                          placeholder="Paste your code or logic prompt here..."
-                          spellCheck={false}
-                        />
+                  {/* Settings Bar - Row 2: Mode Selection */}
+                  <div className="flex items-center gap-3">
+                    <button className="h-[42px] px-6 rounded-xl bg-emerald-500 text-white font-black text-[11px] uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
+                      <Code2 className="w-4 h-4" /> <span>Paste Code</span>
+                    </button>
+                    <div className="relative group/field">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <button
+                        onClick={() => document.getElementById('image-upload')?.click()}
+                        className={cn(
+                          "h-[42px] px-6 rounded-xl border border-zinc-200/50 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20 text-zinc-500 font-black text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all hover:text-emerald-500 hover:border-emerald-500/30",
+                          selectedImage && "border-emerald-500/50 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
+                        )}
+                      >
+                        <ImageIcon className={cn("w-3.5 h-3.5", selectedImage ? "text-emerald-500" : "text-zinc-400")} />
+                        <span>{selectedImage ? "Image Added" : "Upload File"}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Code textarea Container (MVP Mode) with Mac Header */}
+                  <div 
+                    className="flex-1 rounded-[1.5rem] overflow-hidden border border-zinc-200/50 dark:border-white/10 relative mt-4 bg-white dark:bg-[#0b0c10] flex flex-col shadow-2xl"
+                    onDrop={onDrop}
+                    onDragOver={onDragOver}
+                    onDragLeave={() => setIsDragging(false)}
+                  >
+                        {/* Mac-Style Header */}
+                        <div className="h-10 border-b border-zinc-200/50 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20 px-5 flex items-center justify-between shrink-0">
+                          <div className="flex items-center gap-2">
+                             <div className="w-3 h-3 rounded-full bg-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.4)]" />
+                             <div className="w-3 h-3 rounded-full bg-yellow-500/80 shadow-[0_0_8px_rgba(234,179,8,0.4)]" />
+                             <div className="w-3 h-3 rounded-full bg-green-500/80 shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
+                          </div>
+                          <div className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] italic">Editor Mode</div>
+                        </div>
+
+                        <div className="relative flex-1"> 
+                          {/* Inner container for scrollable area */}
+                          <textarea
+                            className="w-full h-full p-4 md:p-6 text-sm font-['JetBrains_Mono','Fira_Code',monospace] bg-transparent text-zinc-900 dark:text-zinc-100 resize-none outline-none custom-scrollbar leading-relaxed"
+                            value={inputCode}
+                            onChange={(e) => setInputCode(e.target.value)}
+                            placeholder="// សូមបញ្ចូលកូដរបស់អ្នកនៅទីនេះ ..."
+                            spellCheck={false}
+                          />
+                          
+                          {isDragging && (
+                            <div className="absolute inset-0 z-50 bg-emerald-500/10 backdrop-blur-sm border-2 border-dashed border-emerald-500 flex flex-col items-center justify-center p-8 text-emerald-500 animate-in fade-in zoom-in duration-200">
+                              <ImageIcon className="w-16 h-16 mb-4 animate-bounce" />
+                              <p className="text-xl font-black uppercase tracking-widest text-center italic">Drop screenshot here</p>
+                              <p className="text-xs font-bold uppercase tracking-widest mt-2 opacity-60">AI will analyze it instantly</p>
+                            </div>
+                          )}
+                          
+                          {selectedImage && (
+                            <div className="absolute top-4 right-4 z-40 group/img">
+                              <div className="relative">
+                                <img 
+                                  src={`data:${selectedImage.mimeType};base64,${selectedImage.data}`} 
+                                  alt="Preview" 
+                                  className="w-24 h-24 object-cover rounded-xl border-2 border-emerald-500 shadow-xl animate-in fade-in zoom-in"
+                                />
+                                <button
+                                  onClick={() => setSelectedImage(null)}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg opacity-0 group-hover/img:opacity-100 transition-opacity"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                              <div className="mt-2 flex items-center justify-center">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded shadow-sm">Attached</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                   </div>
 
                   {/* Actions Bar */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 shrink-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 shrink-0">
                     <button 
                       onClick={() => handleAction('Explain')}
                       disabled={loading}
-                      className="bg-emerald-500 text-white font-bold py-3 md:py-4 px-2 sm:px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-emerald-600 transition-colors disabled:opacity-50 text-[10px] sm:text-xs md:text-[11px] tracking-wider uppercase"
+                      className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-black py-4 px-4 rounded-xl flex items-center justify-center gap-2.5 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:-translate-y-0.5 transition-all disabled:opacity-50 text-[11px] tracking-widest uppercase active:scale-95"
                     >
-                      <BrainCircuit className="w-4 h-4 hidden sm:block" /> Explain
+                      <BrainCircuit className="w-4 h-4" /> <span>Explain</span>
                     </button>
                     <button 
                       onClick={() => handleAction('Debug')}
                       disabled={loading}
-                      className="bg-red-500 text-white font-bold py-3 md:py-4 px-2 sm:px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-red-600 transition-colors disabled:opacity-50 text-[10px] sm:text-xs md:text-[11px] tracking-wider uppercase"
+                      className="bg-gradient-to-br from-red-500 to-red-600 text-white font-black py-4 px-4 rounded-xl flex items-center justify-center gap-2.5 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:-translate-y-0.5 transition-all disabled:opacity-50 text-[11px] tracking-widest uppercase active:scale-95"
                     >
-                      <Bug className="w-4 h-4 hidden sm:block" /> Debug
+                      <Bug className="w-4 h-4" /> <span>Debug</span>
                     </button>
                     <button 
                       onClick={() => handleAction('Refactor')}
                       disabled={loading}
-                      className="bg-purple-500 text-white font-bold py-3 md:py-4 px-2 sm:px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-purple-600 transition-colors disabled:opacity-50 text-[10px] sm:text-xs md:text-[11px] tracking-wider uppercase"
+                      className="bg-gradient-to-br from-purple-500 to-purple-600 text-white font-black py-4 px-4 rounded-xl flex items-center justify-center gap-2.5 hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:-translate-y-0.5 transition-all disabled:opacity-50 text-[11px] tracking-widest uppercase active:scale-95"
                     >
-                      <Wand2 className="w-4 h-4 hidden sm:block" /> Refactor
+                      <Wand2 className="w-4 h-4" /> <span>Refactor</span>
                     </button>
                   </div>
                 </div>

@@ -5,9 +5,9 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import cors from "cors";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 async function startServer() {
   const app = express();
@@ -19,12 +19,18 @@ async function startServer() {
 
   // API routes go here
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", message: "Vide Code Backend is running" });
+    res.json({ status: "ok", message: "Code Clarity Backend is running" });
   });
 
   app.post("/api/explain", async (req, res) => {
     try {
       const { inputCode, language, outputLanguage, actionType, imageData, mimeType } = req.body;
+      
+      if (!process.env.GEMINI_API_KEY) {
+        console.error("GEMINI_API_KEY is missing from environment variables");
+        return res.status(500).json({ error: "API Key configuration error" });
+      }
+
       if (!inputCode && !imageData) {
         return res.status(400).json({ error: "Input code or image is required" });
       }
@@ -51,21 +57,23 @@ Code to process:
 ${inputCode || "No code provided, please analyze the image contents if available."}
 \`\`\``;
 
-      const contents = [
-        {
-          parts: [
-            { text: prompt },
-            ...(imageData ? [{ inlineData: { data: imageData, mimeType: mimeType || "image/png" } }] : [])
-          ]
-        }
+      // Using 'gemini-1.5-pro' for maximum stability across all regions and API keys.
+      // (Note: This is the most reliable model for multimodal code analysis)
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-pro" });
+
+      const parts: any[] = [
+        { text: prompt },
+        ...(imageData ? [{ inlineData: { data: imageData, mimeType: mimeType || "image/png" } }] : [])
       ];
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash", // Use 2.0-flash for vision which is very reliable
-        contents: contents
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts }]
       });
 
-      res.json({ result: response.text });
+      const response = await result.response;
+      const text = response.text();
+
+      res.json({ result: text });
     } catch (error) {
       console.error("Failed to call AI API:", error);
       res.status(500).json({ error: "An error occurred while describing the code" });
