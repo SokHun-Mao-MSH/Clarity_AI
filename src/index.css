@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Siemreap&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Noto+Sans+Khmer:wght@100..900&family=Siemreap&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -72,6 +72,12 @@
 
   .glow-blur {
     @apply absolute rounded-full blur-[120px] opacity-20 dark:opacity-30 mix-blend-screen pointer-events-none animate-pulse;
+  }
+
+  .khmer-text {
+    font-family: "Khmer OS Siemreap", "Siemreap", "Noto Sans Khmer", "Khmer OS Battambang", sans-serif;
+    line-height: 1.95;
+    letter-spacing: 0;
   }
 }
 

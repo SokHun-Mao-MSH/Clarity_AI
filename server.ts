@@ -27,7 +27,7 @@ async function startServer() {
       },
     }),
   );
-  app.use(express.json());
+  app.use(express.json({ limit: "10mb" }));
 
   // API routes go here
   app.get("/api/health", (req, res) => {
@@ -91,6 +91,15 @@ async function startServer() {
 
       res.status(500).json({ error: `AI request failed: ${errorMessage}` });
     }
+  });
+
+  app.use((error: any, req: any, res: any, next: any) => {
+    if (error?.type === "entity.too.large") {
+      return res.status(413).json({
+        error: "Uploaded image is too large. Please use a smaller image (max 10MB request size).",
+      });
+    }
+    return next(error);
   });
 
   // Vite middleware for development

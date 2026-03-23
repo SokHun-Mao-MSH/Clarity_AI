@@ -19,11 +19,11 @@ const Hero: React.FC<HeroProps> = ({ setMainView }) => {
         Made For Beginners
       </motion.div>
       <div className="space-y-4">
-        <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.85] uppercase italic z-10 relative flex flex-col items-center sm:items-start text-center sm:text-left">
-          <motion.span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-900 via-zinc-500 to-zinc-900 dark:from-white dark:via-zinc-400 dark:to-white inline-block pb-2">
+        <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.9] uppercase italic z-10 relative flex flex-col items-center sm:items-start text-center sm:text-left">
+          <motion.span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-900 via-zinc-500 to-zinc-900 dark:from-white dark:via-zinc-400 dark:to-white inline-block pb-2 whitespace-nowrap">
              Code Explainer
           </motion.span>
-          <motion.span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-200 to-emerald-600 dark:from-emerald-400 dark:via-white dark:to-emerald-600 inline-block">
+          <motion.span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-200 to-emerald-600 dark:from-emerald-400 dark:via-white dark:to-emerald-600 inline-block whitespace-nowrap">
              By AI For Beginners
           </motion.span>
         </h1>

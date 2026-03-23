@@ -52,6 +52,87 @@ const OUTPUT_LANGUAGES = [
   'English', 'Khmer'
 ];
 
+const MAX_IMAGE_DIMENSION = 1600;
+const MAX_IMAGE_FILE_SIZE_BYTES = 15 * 1024 * 1024;
+const MAX_IMAGE_BASE64_LENGTH = 8_500_000;
+const SUPPORTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+
+const LANGUAGE_NORMALIZATION: Record<string, string> = {
+  'c#': 'csharp',
+  cpp: 'cpp',
+  mysql: 'sql',
+  react: 'javascript',
+  'react native': 'javascript',
+  vue: 'javascript',
+  angular: 'javascript',
+  laravel: 'php',
+  flutter: 'dart',
+};
+
+const LANGUAGE_OPTION_FROM_DETECTED: Record<string, string> = {
+  csharp: 'c#',
+  cpp: 'cpp',
+  sql: 'sql',
+  javascript: 'javascript',
+  typescript: 'typescript',
+  python: 'python',
+  java: 'java',
+  php: 'php',
+  go: 'go',
+  rust: 'rust',
+  html: 'html',
+  css: 'css',
+  json: 'json',
+  kotlin: 'kotlin',
+  swift: 'swift',
+  dart: 'dart',
+  c: 'c',
+};
+
+const normalizeLanguage = (lang: string): string => LANGUAGE_NORMALIZATION[lang] || lang;
+
+const detectCodeLanguage = (code: string): string | null => {
+  const trimmed = code.trim();
+  if (!trimmed) return null;
+
+  try {
+    JSON.parse(trimmed);
+    return 'json';
+  } catch {
+    // Not JSON; continue heuristics.
+  }
+
+  const patterns: Record<string, RegExp[]> = {
+    python: [/\bdef\s+\w+\s*\(/, /\bprint\s*\(/, /\bimport\s+\w+/, /\bNone\b/, /\belif\b/],
+    typescript: [/\binterface\s+\w+/, /\btype\s+\w+\s*=/, /:\s*(string|number|boolean|any|unknown)\b/, /\bimplements\b/],
+    javascript: [/\bfunction\s+\w+\s*\(/, /\bconsole\.log\s*\(/, /\b(const|let|var)\s+\w+/, /=>/, /\b(document|window)\./],
+    java: [/\bpublic\s+class\s+\w+/, /\bpublic\s+static\s+void\s+main\b/, /\bSystem\.out\.println\s*\(/],
+    csharp: [/\busing\s+System\b/, /\bnamespace\s+\w+/, /\bConsole\.WriteLine\s*\(/],
+    cpp: [/#include\s*</, /\bstd::\w+/, /\bcout\s*<</, /\bcin\s*>>/],
+    c: [/#include\s*</, /\bprintf\s*\(/, /\bscanf\s*\(/],
+    php: [/<\?php/, /\$\w+/, /\becho\b/, /->\w+/],
+    go: [/\bpackage\s+main\b/, /\bfunc\s+\w+\s*\(/, /\bfmt\.Println\s*\(/],
+    rust: [/\bfn\s+main\s*\(/, /\blet\s+mut\b/, /\bprintln!\s*\(/],
+    html: [/<!DOCTYPE html>/i, /<html[\s>]/i, /<div[\s>]/i, /<script[\s>]/i],
+    css: [/[.#]?\w[\w-]*\s*\{[^}]*:[^}]*\}/, /@media\s*\(/, /@keyframes\s+/],
+    sql: [/\bSELECT\b[\s\S]*\bFROM\b/i, /\bINSERT\s+INTO\b/i, /\bUPDATE\b[\s\S]*\bSET\b/i, /\bDELETE\s+FROM\b/i],
+    kotlin: [/\bfun\s+\w+\s*\(/, /\bval\s+\w+/, /\bvar\s+\w+/, /\bprintln\s*\(/],
+    swift: [/\bfunc\s+\w+\s*\(/, /\blet\s+\w+/, /\bvar\s+\w+/, /\bprint\s*\(/],
+    dart: [/\bvoid\s+main\s*\(/, /\bfinal\s+\w+/, /\bString\s+\w+/, /\bprint\s*\(/],
+  };
+
+  let bestMatch: { language: string; score: number } = { language: '', score: 0 };
+
+  Object.entries(patterns).forEach(([languageName, regexes]) => {
+    const score = regexes.reduce((acc, regex) => (regex.test(trimmed) ? acc + 1 : acc), 0);
+    if (score > bestMatch.score) {
+      bestMatch = { language: languageName, score };
+    }
+  });
+
+  return bestMatch.score >= 2 ? bestMatch.language : null;
+};
+
 
 interface CustomDropdownProps {
   value: string;
@@ -98,7 +179,7 @@ const CustomDropdown = ({ value, options, onChange, icon: Icon }: CustomDropdown
             animate={{ opacity: 1, y: 4, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute z-[100] left-0 right-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl shadow-black/10 dark:shadow-black/50 overflow-hidden py-1.5"
+            className="absolute z-[100] left-0 right-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg shadow-black/5 dark:shadow-black/30 overflow-hidden py-1.5"
           >
             <div className="max-h-60 overflow-y-auto custom-scrollbar">
               {options.map((option) => (
@@ -153,11 +234,13 @@ export default function App() {
   // Vision States
   const [selectedImage, setSelectedImage] = useState<{ data: string; mimeType: string } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState('');
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
   const [init, setInit] = useState(false);
   const [copied, setCopied] = useState(false);
+  const isKhmerOutput = outputLanguage === 'Khmer' || /[\u1780-\u17FF]/.test(explanationResult);
 
   useEffect(() => {
     initParticlesEngine(async (engine) => {
@@ -219,6 +302,19 @@ export default function App() {
 
   const handleAction = async (actionType: 'Explain' | 'Debug' | 'Refactor' | 'Generate') => {
     if (!inputCode.trim()) return;
+    const detectedLanguage = detectCodeLanguage(inputCode);
+    const normalizedSelectedLanguage = normalizeLanguage(language);
+    let requestLanguage = language;
+
+    if (detectedLanguage && detectedLanguage !== normalizedSelectedLanguage) {
+      const correctedOption = LANGUAGE_OPTION_FROM_DETECTED[detectedLanguage];
+      if (correctedOption && correctedOption !== language) {
+        setLanguage(correctedOption);
+        requestLanguage = correctedOption;
+        setActionStep(`Detected ${correctedOption.toUpperCase()} from code, language updated automatically.`);
+      }
+    }
+
     setLoading(true);
     
     setExplanationResult('');
@@ -273,7 +369,7 @@ export default function App() {
         },
         body: JSON.stringify({
           inputCode,
-          language,
+          language: requestLanguage,
           outputLanguage,
           actionType,
           imageData: selectedImage?.data,
@@ -303,7 +399,7 @@ export default function App() {
         id: currentProject?.id || Date.now().toString(),
         name: projectName || 'Untitled Snippet',
         description: inputCode,
-        language: language,
+        language: requestLanguage,
         outputLanguage: outputLanguage,
         scope: actionType,
         generatedCode: text,
@@ -364,33 +460,120 @@ export default function App() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+  const readAsDataUrl = (file: File): Promise<string> => (
+    new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage({
-          data: (reader.result as string).split(',')[1],
-          mimeType: file.type
-        });
-      };
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Failed to read image file.'));
       reader.readAsDataURL(file);
+    })
+  );
+
+  const loadImage = (dataUrl: string): Promise<HTMLImageElement> => (
+    new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('Unable to decode the image.'));
+      image.src = dataUrl;
+    })
+  );
+
+  const compressImageToJpeg = async (dataUrl: string): Promise<{ data: string; mimeType: string }> => {
+    const image = await loadImage(dataUrl);
+
+    const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(image.width, image.height));
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+      throw new Error('Unable to process image. Browser canvas is unavailable.');
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+
+    const qualitySteps = [0.9, 0.82, 0.74, 0.66];
+    for (const quality of qualitySteps) {
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+      const base64 = compressedDataUrl.split(',')[1] || '';
+      if (base64.length <= MAX_IMAGE_BASE64_LENGTH) {
+        return { data: base64, mimeType: 'image/jpeg' };
+      }
+    }
+
+    const fallbackDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+    return { data: fallbackDataUrl.split(',')[1] || '', mimeType: 'image/jpeg' };
+  };
+
+  const processImageFile = async (file: File): Promise<{ data: string; mimeType: string }> => {
+    if (!SUPPORTED_IMAGE_TYPES.includes(file.type)) {
+      throw new Error('Unsupported image type. Please upload PNG, JPG, or WEBP.');
+    }
+
+    if (file.size > MAX_IMAGE_FILE_SIZE_BYTES) {
+      throw new Error('Image is too large. Please upload an image smaller than 15MB.');
+    }
+
+    const dataUrl = await readAsDataUrl(file);
+    const image = await loadImage(dataUrl);
+    const base64 = dataUrl.split(',')[1] || '';
+
+    const needsCompression = (
+      file.size > 3 * 1024 * 1024
+      || image.width > MAX_IMAGE_DIMENSION
+      || image.height > MAX_IMAGE_DIMENSION
+      || base64.length > MAX_IMAGE_BASE64_LENGTH
+    );
+
+    const processedImage = needsCompression
+      ? await compressImageToJpeg(dataUrl)
+      : { data: base64, mimeType: file.type };
+
+    if (!processedImage.data || processedImage.data.length > MAX_IMAGE_BASE64_LENGTH) {
+      throw new Error('Image is still too large after optimization. Please crop or resize it and try again.');
+    }
+
+    return processedImage;
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageUploadError('');
+
+    try {
+      const processedImage = await processImageFile(file);
+      setSelectedImage(processedImage);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to upload image.';
+      setImageUploadError(message);
+      setSelectedImage(null);
+    } finally {
+      // Allow selecting the same file again after an error.
+      e.target.value = '';
     }
   };
 
-  const onDrop = (e: React.DragEvent) => {
+  const onDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage({
-          data: (reader.result as string).split(',')[1],
-          mimeType: file.type
-        });
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    setImageUploadError('');
+
+    try {
+      const processedImage = await processImageFile(file);
+      setSelectedImage(processedImage);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to upload image.';
+      setImageUploadError(message);
+      setSelectedImage(null);
     }
   };
 
@@ -467,7 +650,7 @@ export default function App() {
   } as ISourceOptions), [darkMode]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 font-sans selection:bg-emerald-500/30 overflow-x-hidden transition-colors duration-300 relative flex flex-col font-['Inter','Khmer_OS_Siemreap',sans-serif]">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 font-sans selection:bg-emerald-500/30 overflow-x-hidden transition-colors duration-300 relative flex flex-col">
       {/* TSParticles Background */}
       {init && (
         <Particles
@@ -552,7 +735,12 @@ export default function App() {
         )}
       </AnimatePresence>
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-10 flex-grow w-full">
+      <main className={cn(
+        "mx-auto py-6 md:py-10 flex-grow w-full",
+        mainView === 'project'
+          ? "max-w-[1700px] px-3 sm:px-4 lg:px-6"
+          : "max-w-7xl px-4 sm:px-6"
+      )}>
         <AnimatePresence mode="wait">
           {mainView === 'home' ? (
             <motion.div
@@ -572,11 +760,11 @@ export default function App() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="w-full max-w-[1920px] xl:px-8 mx-auto grid lg:grid-cols-2 gap-8 items-start pb-10"
+              className="w-full mx-auto grid grid-cols-1 xl:grid-cols-[minmax(420px,0.95fr)_minmax(520px,1.25fr)] gap-5 xl:gap-6 items-start pb-10"
             >
               {/* Left Column: Input Panel */}
               <div className="space-y-6 lg:sticky lg:top-20 min-w-0">
-                <div className="card-enterprise p-4 md:p-5 space-y-4 border-zinc-200/50 dark:border-white/5 shadow-enterprise-lg h-[60vh] md:h-[80vh] flex flex-col">
+                <div className="card-enterprise p-4 md:p-5 space-y-4 border-zinc-200/50 dark:border-white/5 shadow-enterprise h-[60vh] md:h-[80vh] flex flex-col">
                   {/* Settings Bar - Row 1: Configuration */}
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pb-2">
                      <div className="sm:col-span-2 space-y-2 group/field">
@@ -632,10 +820,15 @@ export default function App() {
                       </button>
                     </div>
                   </div>
+                  {imageUploadError && (
+                    <div className="text-[11px] font-bold text-red-500 dark:text-red-400 mt-1">
+                      {imageUploadError}
+                    </div>
+                  )}
 
                   {/* Code textarea Container (MVP Mode) with Mac Header */}
                   <div 
-                    className="flex-1 rounded-[1.5rem] overflow-hidden border border-zinc-200/50 dark:border-white/10 relative mt-4 bg-white dark:bg-[#0b0c10] flex flex-col shadow-2xl"
+                    className="flex-1 rounded-[1.5rem] overflow-hidden border border-zinc-200/50 dark:border-white/10 relative mt-4 bg-white dark:bg-[#0b0c10] flex flex-col shadow-lg"
                     onDrop={onDrop}
                     onDragOver={onDragOver}
                     onDragLeave={() => setIsDragging(false)}
@@ -677,7 +870,10 @@ export default function App() {
                                   className="w-24 h-24 object-cover rounded-xl border-2 border-emerald-500 shadow-xl animate-in fade-in zoom-in"
                                 />
                                 <button
-                                  onClick={() => setSelectedImage(null)}
+                                  onClick={() => {
+                                    setSelectedImage(null);
+                                    setImageUploadError('');
+                                  }}
                                   className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg opacity-0 group-hover/img:opacity-100 transition-opacity"
                                 >
                                   <X className="w-3 h-3" />
@@ -793,14 +989,10 @@ export default function App() {
                          </div>
                       </div>
                     ) : explanationResult ? (
-                      <div className="prose prose-zinc dark:prose-invert max-w-none 
-                         prose-headings:font-black prose-headings:tracking-tight 
-                         prose-h2:text-emerald-500 prose-h2:border-b-2 prose-h2:border-emerald-500/20 prose-h2:pb-2 prose-h2:mb-6
-                         prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:font-medium text-[14px] md:text-[15px]
-                         prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800 prose-pre:rounded-xl prose-pre:shadow-2xl prose-pre:text-sm prose-pre:overflow-x-auto
-                         prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:font-bold prose-code:bg-emerald-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md
-                         prose-strong:text-zinc-900 dark:prose-strong:text-white prose-strong:font-black
-                         prose-li:text-zinc-700 dark:prose-li:text-zinc-300 prose-li:font-medium">
+                      <div className={cn(
+                        "prose prose-zinc dark:prose-invert max-w-none prose-headings:font-black prose-headings:tracking-tight prose-h2:text-emerald-500 prose-h2:border-b-2 prose-h2:border-emerald-500/20 prose-h2:pb-2 prose-h2:mb-6 prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:font-medium text-[14px] md:text-[15px] prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800 prose-pre:rounded-xl prose-pre:shadow-md prose-pre:text-sm prose-pre:overflow-x-auto prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:font-bold prose-code:bg-emerald-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-strong:text-zinc-900 dark:prose-strong:text-white prose-strong:font-black prose-li:text-zinc-700 dark:prose-li:text-zinc-300 prose-li:font-medium",
+                        isKhmerOutput && "khmer-text"
+                      )}>
                         <Markdown
                           components={{
                             code({ node, className, children, ...props }) {
@@ -808,7 +1000,7 @@ export default function App() {
                               const codeValue = String(children).replace(/\n$/, '');
                               
                               return match ? (
-                                <div className="my-4 md:my-6 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-[#0d0d12] group">
+                                <div className="my-4 md:my-6 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-md bg-white dark:bg-[#0d0d12] group">
                                   <div className="flex items-center justify-between px-3 md:px-4 py-2 md:py-2.5 bg-zinc-50 dark:bg-[#16161a] border-b border-zinc-200 dark:border-white/5">
                                     <div className="flex items-center gap-2">
                                       <div className="flex gap-1.5">
@@ -1018,7 +1210,7 @@ export default function App() {
                     </div>
                     <div className="text-left md:text-right">
                        <span className="inline-block px-5 py-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 font-black tracking-[0.2em] text-sm rounded-xl border border-purple-500/20 uppercase">
-                          Version 1.0.0
+                         Version 1.2.0
                        </span>
                     </div>
                  </div>
