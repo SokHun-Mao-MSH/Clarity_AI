@@ -5,15 +5,28 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import cors from "cors";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initializing the SDK at start-up with a safety check
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
+  const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3-flash-preview";
+  const CORS_ORIGINS = process.env.CORS_ORIGINS || "*";
 
   // Allow cross-origin requests
-  app.use(cors({ origin: true }));
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (!origin || CORS_ORIGINS === "*") {
+          callback(null, true);
+          return;
+        }
+
+        const allowList = CORS_ORIGINS.split(",").map((item) => item.trim());
+        callback(null, allowList.includes(origin));
+      },
+    }),
+  );
   app.use(express.json());
 
   // API routes go here
@@ -51,20 +64,32 @@ async function startServer() {
         outputLanguage,
         actionType,
         imageData,
-        mimeType
+        mimeType,
+        modelName: GEMINI_MODEL,
       });
 
       res.json({ result: text });
     } catch (error: any) {
-      console.error("Failed to call AI API:", error.message);
-      
-      if (error.status === 404) {
-        console.error(`- ERROR: The model was not found.`);
+      const errorMessage = error?.message || String(error);
+      console.error("Failed to call AI API:", errorMessage);
+
+      if (errorMessage.includes("API key not valid")) {
+        return res.status(500).json({ error: "Invalid GEMINI_API_KEY on server." });
+      }
+      if (errorMessage.includes("Model not found") || errorMessage.includes("404")) {
+        return res.status(500).json({
+          error: `Configured model '${GEMINI_MODEL}' is not available for this API key.`,
+        });
+      }
+      if (
+        errorMessage.includes("RESOURCE_EXHAUSTED")
+        || errorMessage.includes("429")
+        || errorMessage.toLowerCase().includes("quota")
+      ) {
+        return res.status(429).json({ error: "Gemini quota/rate limit reached. Please try again later." });
       }
 
-      res
-        .status(500)
-        .json({ error: "An error occurred while describing the code" });
+      res.status(500).json({ error: `AI request failed: ${errorMessage}` });
     }
   });
 
@@ -83,6 +108,7 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`Gemini model: ${GEMINI_MODEL}`);
   });
 }
 

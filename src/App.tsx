@@ -256,8 +256,17 @@ export default function App() {
     }, 1500);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || '';
-      const response = await fetch(`${apiUrl}/api/explain`, {
+      const prodApiUrl = import.meta.env.VITE_API_URL?.trim() || '';
+      const devApiUrl = import.meta.env.VITE_API_URL_DEV?.trim() || '';
+      const apiUrlRaw = import.meta.env.DEV ? devApiUrl : prodApiUrl;
+      const apiUrl = apiUrlRaw.replace(/\/+$/, '');
+      const endpoint = apiUrl ? `${apiUrl}/api/explain` : '/api/explain';
+
+      if (import.meta.env.PROD && !apiUrl) {
+        throw new Error('VITE_API_URL is not configured for production.');
+      }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -273,7 +282,14 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        let errorMessage = 'Network response was not ok';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData?.error || errorMessage;
+        } catch {
+          // Keep the default message if body is not JSON.
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -304,7 +320,8 @@ export default function App() {
     } catch (error) {
       console.error("Action failed:", error);
       setActionStep('Operation Failed');
-      setExplanationResult('Sorry, an error occurred while processing your request. Please ensure the backend server is running and try again.');
+      const details = error instanceof Error ? error.message : 'Unknown error';
+      setExplanationResult(`Sorry, an error occurred while processing your request: ${details}`);
     } finally {
       clearInterval(stepInterval);
       setLoading(false);

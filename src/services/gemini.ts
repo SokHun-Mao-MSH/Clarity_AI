@@ -1,19 +1,26 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
 export interface GenerationOptions {
   inputCode?: string;
   language: string;
   outputLanguage: string;
-  actionType: 'Explain' | 'Debug' | 'Refactor' | 'Generate' | string;
+  actionType: "Explain" | "Debug" | "Refactor" | "Generate" | string;
   imageData?: string;
   mimeType?: string;
+  modelName?: string;
 }
 
 export async function generateAIContent(options: GenerationOptions) {
-  const { inputCode, language, outputLanguage, actionType, imageData, mimeType } = options;
-  
+  const {
+    inputCode,
+    language,
+    outputLanguage,
+    actionType,
+    imageData,
+    mimeType,
+    modelName,
+  } = options;
+
   const prompt = `You are a professional AI code assistant. Your goal is to provide 100% accurate and reliable answers.
 Drive straight into the content without ANY introductory filler.
 
@@ -36,9 +43,11 @@ Code to process:
 ${inputCode || "No code provided, please analyze the image contents if available."}
 \`\`\``;
 
-  // Using gemini-3-flash for API Key 3.0 compatibility as per environment requirements.
-  const modelId = "gemini-3-flash";
-  const model = genAI.getGenerativeModel({ model: modelId });
+  const apiKey = process.env.GEMINI_API_KEY || "";
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const selectedModel = modelName || "gemini-3-flash-preview";
+  const fallbackModel = "gemini-2.0-flash";
+  const model = genAI.getGenerativeModel({ model: selectedModel });
 
   const parts: any[] = [
     { text: prompt },
@@ -58,14 +67,26 @@ ${inputCode || "No code provided, please analyze the image contents if available
     const result = await model.generateContent({
       contents: [{ role: "user", parts }],
     });
-
-    const response = result.response;
-    return response.text();
+    return result.response.text();
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    if (error.status === 404) {
-      throw new Error("Model not found (404). Please ensure 'gemini-3-flash' is available for your API key.");
+    const message = error?.message || String(error);
+    const isModelMissing = error?.status === 404 || message.includes("Model not found");
+
+    if (isModelMissing && selectedModel !== fallbackModel) {
+      try {
+        const fallback = genAI.getGenerativeModel({ model: fallbackModel });
+        const fallbackResult = await fallback.generateContent({
+          contents: [{ role: "user", parts }],
+        });
+        return fallbackResult.response.text();
+      } catch (fallbackError: any) {
+        const fallbackMessage = fallbackError?.message || String(fallbackError);
+        throw new Error(
+          `Model '${selectedModel}' unavailable and fallback '${fallbackModel}' failed: ${fallbackMessage}`,
+        );
+      }
     }
-    throw new Error(`AI Generation failed: ${error.message || "Unknown error"}`);
+
+    throw new Error(`AI Generation failed: ${message}`);
   }
 }
