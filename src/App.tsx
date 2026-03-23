@@ -29,13 +29,19 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from "./utils";
+import { cn, ensureDate } from "./utils";
 import Markdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { type Container, type ISourceOptions } from "@tsparticles/engine";
 import { loadSlim } from "@tsparticles/slim";
+import { Project } from "./types";
+
+// Extracted Components
+import Header from "./components/Header";
+import Hero from "./components/Hero";
+import Features from "./components/Features";
 
 const LANGUAGES = [
   'javascript', 'typescript', 'python', 'java', 'html', 'css', 
@@ -46,16 +52,6 @@ const OUTPUT_LANGUAGES = [
   'English', 'Khmer'
 ];
 
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  language: string;
-  outputLanguage?: string;
-  scope: string;
-  generatedCode: string;
-  createdAt: number;
-}
 
 interface CustomDropdownProps {
   value: string;
@@ -160,7 +156,6 @@ export default function App() {
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
-  const featuresRef = useRef<HTMLDivElement>(null);
   const [init, setInit] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -475,88 +470,14 @@ export default function App() {
       {/* Foreground Content */}
       <div className="relative z-10 w-full flex-grow flex flex-col">
         {/* Header */}
-        <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl fixed top-0 left-0 right-0 z-50">
-        <div className="w-full max-w-[1920px] mx-auto px-4 xl:px-8 h-20 flex items-center justify-between">
-          {/* Left: Logo & App Name with Continuous Animation */}
-          <div className="flex items-center gap-6">
-            <motion.div 
-              className="flex items-center gap-3 cursor-pointer group"
-              onClick={() => setMainView('home')}
-            >
-              <motion.div 
-                whileHover={{ rotate: 180, scale: 1.1 }}
-                transition={{ duration: 0.5, ease: "easeInOut" }}
-                className="w-10 h-10 bg-zinc-900 dark:bg-zinc-100 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.5)] transition-shadow hover:shadow-[0_0_25px_rgba(16,185,129,0.8)]"
-              >
-                <BrainCircuit className="w-5 h-5 text-white dark:text-zinc-900" />
-              </motion.div>
-              <div className="flex flex-col">
-                <motion.span 
-                  animate={{ 
-                    color: ["#10b981", "#8b5cf6", "#3b82f6", "#10b981"]
-                  }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                  className="font-black text-lg sm:text-xl md:text-2xl tracking-tighter text-zinc-900 dark:text-white leading-none uppercase truncate"
-                >
-                  Code Clarity 
-                </motion.span>
-                <span className="text-[10px] md:text-xs text-emerald-500 font-black mt-1 uppercase tracking-[0.2em]">
-                  AI Assistant
-                </span>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Center: Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800">
-            {[
-              { id: 'home', label: 'Home', icon: Home },
-              { id: 'project', label: 'Code Explainer', icon: Code2 },
-              { id: 'history', label: 'History', icon: History },
-            ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setMainView(item.id as any)}
-                className={cn(
-                  "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all",
-                  mainView === item.id 
-                    ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm" 
-                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-                )}
-              >
-                <item.icon className="w-4 h-4" />
-                {item.label}
-              </button>
-            ))}
-          </nav>
-
-          {/* Right: Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              onClick={() => setMainView('settings')}
-              className={cn("p-2 rounded-lg transition-colors hidden md:block", mainView === 'settings' ? 'bg-emerald-500/10 text-emerald-500' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800')}
-              title="Settings"
-            >
-              <Settings2 className="w-5 h-5" />
-            </button>
-            
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors hidden md:block"
-            >
-              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
-
-            {/* Mobile Menu Toggle */}
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="lg:hidden p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-            >
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-      </header>
+      <Header 
+        mainView={mainView} 
+        setMainView={setMainView} 
+        darkMode={darkMode} 
+        setDarkMode={setDarkMode} 
+        isMenuOpen={isMenuOpen} 
+        setIsMenuOpen={setIsMenuOpen} 
+      />
 
       {/* Header Spacer */}
       <div className="h-20" />
@@ -624,91 +545,9 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-12 py-2"
             >
-              {/* Hero Section */}
-              <div className="text-center space-y-8 max-w-3xl mx-auto">
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-widest border border-emerald-500/20"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Made For Beginners
-                </motion.div>
-                <div className="space-y-4">
-                  <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.85] uppercase italic z-10 relative flex flex-col items-center sm:items-start text-center sm:text-left">
-                    <motion.span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-900 via-zinc-500 to-zinc-900 dark:from-white dark:via-zinc-400 dark:to-white inline-block pb-2">
-                       Code Explainer
-                    </motion.span>
-                    <motion.span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-200 to-emerald-600 dark:from-emerald-400 dark:via-white dark:to-emerald-600 inline-block">
-                       By AI For Beginners
-                    </motion.span>
-                  </h1>
-                  <p className="text-lg md:text-2xl text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed max-w-2xl mx-auto z-10 relative">
-                    Paste your code below and let our intelligent AI explain it line-by-line, debug issues, or refactor it into clean, best-practice syntax.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-6 pt-2">
-                  <button 
-                    onClick={() => setMainView('project')}
-                    className="group relative overflow-hidden bg-zinc-900 dark:bg-white text-white dark:text-black px-10 py-5 xl:py-6 rounded-2xl text-sm font-black uppercase tracking-[0.2em] shadow-2xl transition-all active:scale-95 flex items-center gap-3"
-                  >
-                    <Zap className="w-5 h-5 fill-current" />
-                    Start Learning
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </div>
-              </div>
+              <Hero setMainView={setMainView} />
 
-              {/* Features Grid */}
-              <div ref={featuresRef} className="space-y-12">
-                <div className="text-center space-y-4 pt-10">
-                  <h2 className="text-xs font-black uppercase tracking-[0.3em] text-emerald-500">Core Capabilities</h2>
-                  <p className="text-2xl md:text-4xl font-black tracking-tight text-zinc-900 dark:text-white uppercase italic">Everything you need to learn</p>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-6">
-                  {[
-                    {
-                      title: 'Line-by-Line Explanation',
-                      desc: 'AI breaks down complex logic and syntax step-by-step for absolute beginners.',
-                      icon: BrainCircuit,
-                      color: 'text-emerald-500',
-                      bg: 'bg-emerald-500/10'
-                    },
-                    {
-                      title: 'Smart Debugging',
-                      desc: 'Automatically parses error statements, identifies bugs, and provides fixed solutions with clear reasoning.',
-                      icon: Bug,
-                      color: 'text-red-500',
-                      bg: 'bg-red-500/10'
-                    },
-                    {
-                      title: 'Code Refactoring',
-                      desc: 'Transforms inefficient code into clean architecture while explaining the best practices.',
-                      icon: Wand2,
-                      color: 'text-purple-500',
-                      bg: 'bg-purple-500/10'
-                    }
-                  ].map((feature, i) => (
-                    <motion.div
-                      key={feature.title}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 + (i * 0.1) }}
-                      className="card-enterprise p-8 md:p-10 space-y-6 group hover:border-emerald-500/50 transition-all border-zinc-200/50 dark:border-white/5"
-                    >
-                      <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 shadow-lg", feature.bg)}>
-                        <feature.icon className={cn("w-7 h-7", feature.color)} />
-                      </div>
-                      <div className="space-y-3">
-                        <h3 className="text-xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">{feature.title}</h3>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">{feature.desc}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
+              <Features />
             </motion.div>
           ) : mainView === 'project' ? (
             <motion.div 
@@ -1073,7 +912,7 @@ export default function App() {
                             <span className="flex items-center gap-1.5 text-blue-500"><Terminal className="w-3.5 h-3.5" /> Action: {project.scope || 'Explain'}</span>
                             <span className="flex items-center gap-1.5"><Globe2 className="w-3.5 h-3.5" /> Output: {project.outputLanguage || 'English'}</span>
                             <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> 
-                              {new Date(project.createdAt).toLocaleDateString() || 'Recently'}
+                              {ensureDate(project.createdAt).toLocaleDateString() || 'Recently'}
                             </span>
                           </div>
                         </div>

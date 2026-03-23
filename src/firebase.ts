@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { Project, ProjectVersion, OperationType, FirestoreErrorInfo } from './types';
 
 // Initialize Firebase from environment variables
 const firebaseConfig = {
@@ -24,35 +25,6 @@ export const googleProvider = new GoogleAuthProvider();
 export const signIn = () => signInWithPopup(auth, googleProvider);
 export const logOut = () => signOut(auth);
 
-// Firestore Types
-export enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
-
-export interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId: string | undefined;
-    email: string | null | undefined;
-    emailVerified: boolean | undefined;
-    isAnonymous: boolean | undefined;
-    tenantId: string | null | undefined;
-    providerInfo: {
-      providerId: string;
-      displayName: string | null;
-      email: string | null;
-      photoUrl: string | null;
-    }[];
-  }
-}
-
 export const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
@@ -73,28 +45,8 @@ export const handleFirestoreError = (error: unknown, operationType: OperationTyp
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  throw error;
 };
-
-export interface ProjectVersion {
-  id: string;
-  timestamp: Timestamp;
-  code: string;
-  prompt: string;
-}
-
-export interface Project {
-  id?: string;
-  name: string;
-  description: string;
-  framework?: string;
-  language?: string;
-  scope?: string;
-  generatedCode?: string;
-  userId: string;
-  createdAt: Timestamp;
-  versions?: ProjectVersion[];
-}
 
 // Firestore Helpers
 export const projectsCollection = collection(db, 'projects');
