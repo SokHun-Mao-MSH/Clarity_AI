@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Code2, 
   Sparkles, 
@@ -30,13 +30,15 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from "./utils";
 import Markdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { type Container, type ISourceOptions } from "@tsparticles/engine";
 import { loadSlim } from "@tsparticles/slim";
 
 const LANGUAGES = [
   'javascript', 'typescript', 'python', 'java', 'html', 'css', 
-  'php', 'csharp', 'cpp', 'c', 'mysql', 'sql', 'dart', 'go', 'rust', 'json'
+  'php', 'laravel', 'c#', 'cpp', 'c', 'mysql', 'sql', 'dart', 'kotlin', 'swift', 'flutter', 'react', 'react native', 'vue', 'angular', 'go', 'rust', 'json'
 ];
 
 const OUTPUT_LANGUAGES = [
@@ -225,28 +227,24 @@ export default function App() {
       'Explain': [
         "Analyzing Code Structure...",
         "Identifying Key Concepts...",
-        "Breaking Down Logic Line-by-Line...",
+        "Breaking Down Logic Step-by-Step...",
         "Generating Beginner-Friendly Explanation..."
       ],
       'Debug': [
-        "Scanning Logic & Errors...",
-        "Tracing Execution Paths...",
-        "Formulating Bug Fixes...",
-        "Explaining Corrections Step-by-Step..."
+        "Scanning Code for Errors...",
+        "Identifying Bug Origins...",
+        "Formulating Precise Fixes...",
+        "Preparing Corrected Code & Explanation..."
       ],
       'Refactor': [
-        "Analyzing Code Efficiency...",
-        "Applying Best Practices...",
-        "Optimizing Logic...",
-        "Generating Cleaner Code with Explanations..."
-      ],
-      'Generate': [
-        "Parsing Requirements...",
-        "Drafting Logic Architecture...",
-        "Writing Secure Syntax...",
-        "Formatting Explanations..."
+        "Analyzing Code Architecture...",
+        "Applying Professional Standards...",
+        "Optimizing for Maintainability...",
+        "Generating Clean & Efficient Syntax..."
       ]
     };
+    
+    setActionStep(actionType === 'Explain' ? 'Explaining...' : actionType === 'Debug' ? 'Debugging...' : 'Refactoring...');
     
     const steps = stepsOptions[actionType];
     let stepIndex = 0;
@@ -347,6 +345,62 @@ export default function App() {
     }
   };
 
+
+  const particlesOptions = useMemo(() => ({
+    fpsLimit: 120,
+    interactivity: {
+      detectsOn: "window",
+      events: {
+        onHover: {
+          enable: false,
+        },
+        onClick: {
+          enable: false,
+        }
+      },
+    },
+    particles: {
+      color: {
+        value: darkMode ? "#10b981e4" : "#059668cf",
+      },
+      links: {
+        color: darkMode ? "#34d399" : "#10b981",
+        distance: 150,
+        enable: true,
+        opacity: darkMode ? 0.8 : 0.6,
+        width: 1.5,
+      },
+      move: {
+        enable: true, // Re-enabled as requested
+        speed: 1.2,
+        direction: "none",
+        random: true,
+        straight: false,
+        outModes: {
+          default: "bounce",
+        },
+      },
+      number: {
+        density: {
+          enable: true,
+          width: 800,
+          height: 800,
+        },
+        value: 60,
+      },
+      opacity: {
+        value: darkMode ? 0.9 : 0.8,
+      },
+      shape: {
+        type: "circle",
+      },
+      size: {
+        value: { min: 1, max: 3 },
+      },
+    },
+    detectRetina: true,
+  } as ISourceOptions), [darkMode]);
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 font-sans selection:bg-emerald-500/30 overflow-x-hidden transition-colors duration-300 relative flex flex-col font-['Inter','Khmer_OS_Siemreap',sans-serif]">
       {/* TSParticles Background */}
@@ -355,66 +409,7 @@ export default function App() {
           id="tsparticles"
           particlesLoaded={particlesLoaded}
           className="fixed inset-0 z-0 pointer-events-none"
-          options={{
-            fpsLimit: 120,
-            interactivity: {
-              detectsOn: "window",
-              events: {
-                onHover: {
-                  enable: true,
-                  mode: "grab",
-                },
-              },
-              modes: {
-                grab: {
-                  distance: 150,
-                  links: {
-                    opacity: 0.8,
-                  },
-                },
-              },
-            },
-            particles: {
-              color: {
-                value: darkMode ? "#10b981e4" : "#059668cf",
-              },
-              links: {
-                color: darkMode ? "#34d399" : "#10b981",
-                distance: 150,
-                enable: true,
-                opacity: darkMode ? 0.8 : 0.6,
-                width: 1.5,
-              },
-              move: {
-                direction: "none",
-                enable: true,
-                outModes: {
-                  default: "bounce",
-                },
-                random: true,
-                speed: 1.2,
-                straight: false,
-              },
-              number: {
-                density: {
-                  enable: true,
-                  width: 800,
-                  height: 800,
-                },
-                value: 60,
-              },
-              opacity: {
-                value: darkMode ? 0.9 : 0.8,
-              },
-              shape: {
-                type: "circle",
-              },
-              size: {
-                value: { min: 1, max: 3 },
-              },
-            },
-            detectRetina: true,
-          } as ISourceOptions}
+          options={particlesOptions}
         />
       )}
 
@@ -711,14 +706,7 @@ export default function App() {
                   </div>
 
                   {/* Actions Bar */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 shrink-0">
-                    <button 
-                      onClick={() => handleAction('Generate')}
-                      disabled={loading}
-                      className="bg-blue-500 text-white font-bold py-3 md:py-4 px-2 sm:px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-600 transition-colors disabled:opacity-50 text-[10px] sm:text-xs md:text-[11px] tracking-wider uppercase"
-                    >
-                      <Sparkles className="w-4 h-4 hidden sm:block" /> Generate
-                    </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 shrink-0">
                     <button 
                       onClick={() => handleAction('Explain')}
                       disabled={loading}
@@ -754,7 +742,7 @@ export default function App() {
                     <div className="flex items-center gap-3">
                       <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse shadow-sm shadow-blue-500/50" />
                       <span className="text-xs font-black text-zinc-900 dark:text-white uppercase tracking-widest">
-                        AI Explanation Output
+                        {currentProject?.scope ? `${currentProject.scope} Output` : 'AI Explanation Output'}
                       </span>
                     </div>
                     {explanationResult && (
@@ -793,7 +781,71 @@ export default function App() {
                          prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:font-bold prose-code:bg-emerald-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md
                          prose-strong:text-zinc-900 dark:prose-strong:text-white prose-strong:font-black
                          prose-li:text-zinc-700 dark:prose-li:text-zinc-300 prose-li:font-medium">
-                        <Markdown>{explanationResult}</Markdown>
+                        <Markdown
+                          components={{
+                            code({ node, className, children, ...props }) {
+                              const match = /language-(\w+)/.exec(className || '');
+                              const codeValue = String(children).replace(/\n$/, '');
+                              
+                              return match ? (
+                                <div className="my-6 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-[#0d0d12] group">
+                                  <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-50 dark:bg-[#16161a] border-b border-zinc-200 dark:border-white/5">
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex gap-1.5">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+                                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+                                      </div>
+                                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">
+                                        {match[1]}
+                                      </span>
+                                    </div>
+                                    <button
+                                      onClick={(e) => {
+                                        navigator.clipboard.writeText(codeValue);
+                                        const btn = e.currentTarget as HTMLButtonElement;
+                                        if (btn) {
+                                          const originalIcon = btn.innerHTML;
+                                          btn.innerHTML = '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                                          setTimeout(() => btn.innerHTML = originalIcon, 2000);
+                                        }
+                                      }}
+                                      className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500 hover:text-emerald-500 transition-colors"
+                                      title="Copy Code"
+                                    >
+                                      <Copy className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                  <div className="p-0">
+                                    <SyntaxHighlighter
+                                      style={darkMode ? oneDark : prism}
+                                      language={match[1]}
+                                      PreTag="div"
+                                      wrapLongLines={true}
+                                      customStyle={{
+                                        margin: 0,
+                                        padding: '1.5rem',
+                                        fontSize: '0.9rem',
+                                        lineHeight: '1.6',
+                                        background: 'transparent',
+                                        wordBreak: 'break-all',
+                                        whiteSpace: 'pre-wrap'
+                                      }}
+                                    >
+                                      {codeValue}
+                                    </SyntaxHighlighter>
+                                  </div>
+                                </div>
+                              ) : (
+                                <code className={cn("px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 font-bold", className)} {...props}>
+                                  {children}
+                                </code>
+                              );
+                            }
+                          }}
+                        >
+                          {explanationResult}
+                        </Markdown>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full space-y-4 opacity-50">
