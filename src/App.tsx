@@ -352,11 +352,22 @@ export default function App() {
       detectsOn: "window",
       events: {
         onHover: {
-          enable: false,
+          enable: true,
+          mode: "repulse",
         },
         onClick: {
-          enable: false,
+          enable: true,
+          mode: "push",
         }
+      },
+      modes: {
+        repulse: {
+          distance: 100,
+          duration: 0.4,
+        },
+        push: {
+          quantity: 4,
+        },
       },
     },
     particles: {
@@ -413,6 +424,12 @@ export default function App() {
         />
       )}
 
+      {/* Premium Background Glows */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="glow-blur bg-emerald-500/20 w-[500px] h-[500px] -top-48 -left-48" />
+        <div className="glow-blur bg-purple-500/10 w-[600px] h-[600px] -bottom-64 -right-64 animate-delay-1000" />
+      </div>
+
       {/* Foreground Content */}
       <div className="relative z-10 w-full flex-grow flex flex-col">
         {/* Header */}
@@ -437,7 +454,7 @@ export default function App() {
                     color: ["#10b981", "#8b5cf6", "#3b82f6", "#10b981"]
                   }}
                   transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                  className="font-black text-xl md:text-2xl tracking-tighter text-zinc-900 dark:text-white leading-none uppercase"
+                  className="font-black text-lg sm:text-xl md:text-2xl tracking-tighter text-zinc-900 dark:text-white leading-none uppercase truncate"
                 >
                   Code Clarity
                 </motion.span>
@@ -577,12 +594,12 @@ export default function App() {
                   Made For Beginners
                 </motion.div>
                 <div className="space-y-4">
-                  <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.85] uppercase italic z-10 relative flex flex-col items-center sm:items-start">
+                  <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.85] uppercase italic z-10 relative flex flex-col items-center sm:items-start text-center sm:text-left">
                     <motion.span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-900 via-zinc-500 to-zinc-900 dark:from-white dark:via-zinc-400 dark:to-white inline-block pb-2">
-                      Code Explainer
+                       Code Explainer
                     </motion.span>
                     <motion.span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-200 to-emerald-600 dark:from-emerald-400 dark:via-white dark:to-emerald-600 inline-block">
-                      By AI for Beginners
+                       By AI For Beginners
                     </motion.span>
                   </h1>
                   <p className="text-lg md:text-2xl text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed max-w-2xl mx-auto z-10 relative">
@@ -696,13 +713,13 @@ export default function App() {
 
                   {/* Code textarea Container (MVP Mode) */}
                   <div className="flex-1 rounded-[1rem] md:rounded-[1.5rem] overflow-hidden border border-zinc-200/50 dark:border-white/10 relative mt-2 bg-white dark:bg-[#1e1e1e]">
-                     <textarea
-                        className="w-full h-full p-6 text-sm font-['JetBrains_Mono','Fira_Code',monospace] bg-transparent text-zinc-900 dark:text-zinc-100 resize-none outline-none custom-scrollbar leading-relaxed"
-                        value={inputCode}
-                        onChange={(e) => setInputCode(e.target.value)}
-                        placeholder="Paste your code or logic prompt here..."
-                        spellCheck={false}
-                     />
+                        <textarea
+                          className="w-full h-full p-4 md:p-6 text-sm font-['JetBrains_Mono','Fira_Code',monospace] bg-transparent text-zinc-900 dark:text-zinc-100 resize-none outline-none custom-scrollbar leading-relaxed"
+                          value={inputCode}
+                          onChange={(e) => setInputCode(e.target.value)}
+                          placeholder="Paste your code or logic prompt here..."
+                          spellCheck={false}
+                        />
                   </div>
 
                   {/* Actions Bar */}
@@ -748,35 +765,69 @@ export default function App() {
                     {explanationResult && (
                        <button 
                         onClick={copyToClipboard}
-                        className="p-2 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-emerald-500 transition-colors"
+                        className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-500 hover:text-emerald-500 transition-all active:scale-95 group relative overflow-hidden"
+                        title="Copy All"
                        >
-                         {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                         <AnimatePresence mode="wait" initial={false}>
+                            {copied ? (
+                              <motion.div
+                                key="check"
+                                initial={{ opacity: 0, scale: 0.5, rotate: -45 }}
+                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                                exit={{ opacity: 0, scale: 0.5 }}
+                              >
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                              </motion.div>
+                            ) : (
+                              <motion.div
+                                key="copy"
+                                initial={{ opacity: 0, scale: 0.5 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.5 }}
+                              >
+                                <Copy className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                              </motion.div>
+                            )}
+                         </AnimatePresence>
                        </button>
                     )}
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-5 md:p-8 custom-scrollbar relative">
+                  <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative">
                     {loading ? (
-                      <div className="flex flex-col items-center justify-center h-full space-y-6">
-                         <div className="relative">
-                            <div className="w-16 h-16 border-4 border-zinc-200 dark:border-zinc-800 rounded-full" />
-                            <div className="absolute top-0 left-0 w-16 h-16 border-4 border-emerald-500 rounded-full border-t-transparent animate-spin" />
-                            <Zap className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-emerald-500 animate-pulse" />
+                      <div className="space-y-6">
+                         {/* Modern Shimmer Skeleton */}
+                         <div className="space-y-4">
+                            <div className="h-8 w-3/4 rounded-lg bg-zinc-100 dark:bg-white/5 shimmer" />
+                            <div className="space-y-2">
+                               <div className="h-4 w-full rounded bg-zinc-100 dark:bg-white/5 shimmer" />
+                               <div className="h-4 w-5/6 rounded bg-zinc-100 dark:bg-white/5 shimmer" />
+                               <div className="h-4 w-4/6 rounded bg-zinc-100 dark:bg-white/5 shimmer" />
+                            </div>
+                            <div className="h-48 w-full rounded-xl bg-zinc-100 dark:bg-white/5 shimmer" />
+                            <div className="space-y-2">
+                               <div className="h-4 w-full rounded bg-zinc-100 dark:bg-white/5 shimmer" />
+                               <div className="h-4 w-2/3 rounded bg-zinc-100 dark:bg-white/5 shimmer" />
+                            </div>
                          </div>
-                         <div className="text-center space-y-2">
-                           <div className="text-emerald-500 font-black uppercase tracking-widest text-sm animate-pulse">
-                              Processing
-                           </div>
-                           <div className="text-zinc-500 text-[10px] md:text-xs font-bold uppercase tracking-widest max-w-[200px] mx-auto leading-relaxed">
-                             {actionStep}
-                           </div>
+                         
+                         {/* Refined Loading Indicator */}
+                         <div className="flex items-center gap-4 p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 animate-in fade-in slide-in-from-bottom-4">
+                            <div className="relative shrink-0">
+                               <div className="w-10 h-10 border-2 border-emerald-500/20 rounded-full" />
+                               <div className="absolute top-0 left-0 w-10 h-10 border-2 border-emerald-500 rounded-full border-t-transparent animate-spin" />
+                            </div>
+                            <div className="min-w-0">
+                               <div className="text-emerald-500 font-black uppercase tracking-widest text-[10px] animate-pulse">Processing</div>
+                               <div className="text-zinc-500 text-[11px] font-bold uppercase tracking-tight truncate">{actionStep}</div>
+                            </div>
                          </div>
                       </div>
                     ) : explanationResult ? (
                       <div className="prose prose-zinc dark:prose-invert max-w-none 
                          prose-headings:font-black prose-headings:tracking-tight 
                          prose-h2:text-emerald-500 prose-h2:border-b-2 prose-h2:border-emerald-500/20 prose-h2:pb-2 prose-h2:mb-6
-                         prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:font-medium text-[15px]
+                         prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:font-medium text-[14px] md:text-[15px]
                          prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800 prose-pre:rounded-xl prose-pre:shadow-2xl prose-pre:text-sm prose-pre:overflow-x-auto
                          prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:font-bold prose-code:bg-emerald-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md
                          prose-strong:text-zinc-900 dark:prose-strong:text-white prose-strong:font-black
@@ -788,8 +839,8 @@ export default function App() {
                               const codeValue = String(children).replace(/\n$/, '');
                               
                               return match ? (
-                                <div className="my-6 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-[#0d0d12] group">
-                                  <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-50 dark:bg-[#16161a] border-b border-zinc-200 dark:border-white/5">
+                                <div className="my-4 md:my-6 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-[#0d0d12] group">
+                                  <div className="flex items-center justify-between px-3 md:px-4 py-2 md:py-2.5 bg-zinc-50 dark:bg-[#16161a] border-b border-zinc-200 dark:border-white/5">
                                     <div className="flex items-center gap-2">
                                       <div className="flex gap-1.5">
                                         <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
@@ -824,8 +875,8 @@ export default function App() {
                                       wrapLongLines={true}
                                       customStyle={{
                                         margin: 0,
-                                        padding: '1.5rem',
-                                        fontSize: '0.9rem',
+                                        padding: window.innerWidth < 768 ? '1rem' : '1.5rem',
+                                        fontSize: window.innerWidth < 768 ? '0.85rem' : '0.9rem',
                                         lineHeight: '1.6',
                                         background: 'transparent',
                                         wordBreak: 'break-all',
@@ -869,8 +920,8 @@ export default function App() {
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white">Saved <span className="text-emerald-500">Explanations</span></h2>
-                  <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest mt-1">Your past logic explanations and insights</p>
+                  <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white">Saved <span className="text-emerald-500">Explanations</span></h2>
+                  <p className="text-zinc-400 text-[10px] md:text-sm font-bold uppercase tracking-widest mt-1">Your past logic explanations and insights</p>
                 </div>
                 <button 
                   onClick={handleNewProject}
@@ -894,9 +945,9 @@ export default function App() {
                     <div 
                       key={project.id}
                       onClick={() => selectProject(project)}
-                      className="card-enterprise p-6 cursor-pointer group hover:border-emerald-500/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                      className="card-enterprise p-4 sm:p-6 cursor-pointer group hover:border-emerald-500/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                     >
-                      <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-4 sm:gap-6">
                         <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-emerald-500/10 transition-colors shrink-0">
                           <Code2 className="w-6 h-6 text-zinc-400 group-hover:text-emerald-500 transition-colors" />
                         </div>

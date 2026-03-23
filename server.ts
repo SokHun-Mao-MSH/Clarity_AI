@@ -24,9 +24,9 @@ async function startServer() {
 
   app.post("/api/explain", async (req, res) => {
     try {
-      const { inputCode, language, outputLanguage, actionType } = req.body;
-      if (!inputCode) {
-        return res.status(400).json({ error: "Input code is required" });
+      const { inputCode, language, outputLanguage, actionType, imageData, mimeType } = req.body;
+      if (!inputCode && !imageData) {
+        return res.status(400).json({ error: "Input code or image is required" });
       }
 
       const prompt = `You are a professional AI code assistant. Your goal is to provide 100% accurate and reliable answers.
@@ -40,19 +40,29 @@ Guidelines:
    - Explain: Provide step-by-step guidance. Make it simple and beginner-friendly. Use clear examples.
    - Debug: Clearly explain the cause of the error. Show how to fix it. When providing the fixed code, use the header "កូដដែលបានកែតម្រូវ (Corrected Code):" and then the code block.
    - Refactor: Rewrite code in a clean, professional, and maintainable way following best practices.
-4. Code Review: Analyze the provided code carefully. Identify any errors or bad practices. Even in "Explain" mode, if the code has mistakes, point them out and explain why, then suggest improvements.
-5. Formatting: ALWAYS wrap any code snippets in triple backticks with the language specified (e.g. \`\`\`javascript). Do not write code like a sentence. Use clear, separate blocks.
+4. Vision: If an image is provided, analyze it for visible code, error messages, or UI issues. Combine this with any provided code to give a complete solution.
+5. Code Review: Analyze the provided code/image carefully. Identify any errors or bad practices. Even in "Explain" mode, if there are mistakes, point them out and explain why, then suggest improvements.
+6. Formatting: ALWAYS wrap any code snippets in triple backticks with the language specified (e.g. \`\`\`javascript). Do not write code like a sentence. Use clear, separate blocks.
 
 CRITICAL: START YOUR RESPONSE DIRECTLY WITH THE CONTENT. DO NOT INCLUDE ANY HEADER OR INTRODUCTION.
 
 Code to process:
 \`\`\`${language}
-${inputCode}
+${inputCode || "No code provided, please analyze the image contents if available."}
 \`\`\``;
 
+      const contents = [
+        {
+          parts: [
+            { text: prompt },
+            ...(imageData ? [{ inlineData: { data: imageData, mimeType: mimeType || "image/png" } }] : [])
+          ]
+        }
+      ];
+
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt
+        model: "gemini-2.0-flash", // Use 2.0-flash for vision which is very reliable
+        contents: contents
       });
 
       res.json({ result: response.text });

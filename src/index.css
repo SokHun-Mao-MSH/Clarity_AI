@@ -35,11 +35,11 @@
   }
   
   .card-enterprise {
-    @apply bg-white border border-zinc-200 rounded-2xl shadow-enterprise dark:bg-zinc-900 dark:border-zinc-800 transition-all duration-300;
+    @apply bg-white/80 border border-zinc-200 rounded-2xl shadow-enterprise dark:bg-zinc-900/40 dark:border-white/5 backdrop-blur-2xl transition-all duration-500;
   }
 
   .card-enterprise-hover {
-    @apply hover:shadow-enterprise-lg hover:border-zinc-300 dark:hover:border-zinc-700;
+    @apply hover:shadow-enterprise-xl hover:border-emerald-500/30 dark:hover:border-emerald-500/20 translate-y-0 hover:-translate-y-1;
   }
 
   .input-enterprise {
@@ -65,6 +65,25 @@
   .badge-zinc {
     @apply bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-white/5 dark:text-zinc-400 dark:border-white/10;
   }
+
+  .shimmer {
+    @apply relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent dark:before:via-white/5;
+  }
+
+  .glow-blur {
+    @apply absolute rounded-full blur-[120px] opacity-20 dark:opacity-30 mix-blend-screen pointer-events-none animate-pulse;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 .custom-scrollbar::-webkit-scrollbar {
