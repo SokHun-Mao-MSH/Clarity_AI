@@ -51,32 +51,32 @@ const LANGUAGES = [
 const OUTPUT_LANGUAGES = [
   'English', 'Khmer'
 ];
- 
-const DEFAULT_PROD_API_URL = 'https://code-clarity-api.onrender.com';
 
+// Fallback API URL used when production env vars are missing or invalid.
+const DEFAULT_PROD_API_URL = 'https://code-clarity-api.onrender.com';
 const resolveApiBaseUrl = (): string => {
   const sanitize = (value: string) => value.replace(/\/+$/, '');
 
-  if (import.meta.env.PROD) {
-    return sanitize(DEFAULT_PROD_API_URL);
-  }
-
   if (import.meta.env.DEV) {
-    const devApiUrl = import.meta.env.VITE_API_URL_DEV?.trim() || '';
-    return sanitize(devApiUrl);
+    const devApiUrl = import.meta.env.VITE_API_URL_DEV?.trim();
+    return devApiUrl ? sanitize(devApiUrl) : '';
   }
 
-  const prodApiUrl = sanitize(import.meta.env.VITE_API_URL?.trim() || '');
-  const prodFallbackApiUrl = sanitize(
-    import.meta.env.VITE_API_URL_FALLBACK?.trim() || DEFAULT_PROD_API_URL,
-  );
+  const prodApiUrl = import.meta.env.VITE_API_URL?.trim();
+  const prodFallbackApiUrl = sanitize(import.meta.env.VITE_API_URL_FALLBACK?.trim() || DEFAULT_PROD_API_URL);
 
-  if (!prodApiUrl) {
+  if (prodApiUrl) {
+    const sanitizedUrl = sanitize(prodApiUrl);
+    const isLikelyFirebaseHost = /web\.app|firebaseapp\.com/i.test(sanitizedUrl);
+    const isSameOrigin = typeof window !== 'undefined' && sanitizedUrl === window.location.origin;
+    
+    if (!isLikelyFirebaseHost && !isSameOrigin) {
+      return sanitizedUrl;
+    }
     return prodFallbackApiUrl;
   }
 
-  const isLikelyFirebaseHost = /web\.app|firebaseapp\.com/i.test(prodApiUrl);
-  return isLikelyFirebaseHost ? prodFallbackApiUrl : prodApiUrl;
+  return prodFallbackApiUrl;
 };
 
 const MAX_IMAGE_DIMENSION = 1600;
@@ -381,6 +381,7 @@ export default function App() {
     try {
       const apiUrl = resolveApiBaseUrl();
       const endpoint = apiUrl ? `${apiUrl}/api/explain` : '/api/explain';
+      console.log('API Request URL:', endpoint); // DEBUG: Check this in Chrome Console (F12)
 
       if (import.meta.env.PROD && !apiUrl) {
         throw new Error('VITE_API_URL is not configured for production.');
@@ -447,7 +448,12 @@ export default function App() {
     } catch (error) {
       console.error("Action failed:", error);
       setActionStep('Operation Failed');
-      const details = error instanceof Error ? error.message : 'Unknown error';
+      let details = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (details === 'Failed to fetch') {
+         details = 'Could not connect to server. Check if the Backend URL is correct and the server is running (Render free tier may take 1 minute to wake up).';
+      }
+      
       setExplanationResult(`Sorry, an error occurred while processing your request: ${details}`);
     } finally {
       clearInterval(stepInterval);
