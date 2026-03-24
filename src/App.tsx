@@ -56,27 +56,28 @@ const OUTPUT_LANGUAGES = [
 const DEFAULT_PROD_API_URL = 'https://code-clarity-api.onrender.com';
 const resolveApiBaseUrl = (): string => {
   const sanitize = (value: string) => value.replace(/\/+$/, '');
-
-  if (import.meta.env.DEV) {
-    const devApiUrl = import.meta.env.VITE_API_URL_DEV?.trim();
-    return devApiUrl ? sanitize(devApiUrl) : '';
-  }
-
-  const prodApiUrl = import.meta.env.VITE_API_URL?.trim();
+  const devApiUrl = sanitize(import.meta.env.VITE_API_URL_DEV?.trim() || '');
+  const prodApiUrl = sanitize(import.meta.env.VITE_API_URL?.trim() || '');
   const prodFallbackApiUrl = sanitize(import.meta.env.VITE_API_URL_FALLBACK?.trim() || DEFAULT_PROD_API_URL);
 
-  if (prodApiUrl) {
-    const sanitizedUrl = sanitize(prodApiUrl);
-    const isLikelyFirebaseHost = /web\.app|firebaseapp\.com/i.test(sanitizedUrl);
-    const isSameOrigin = typeof window !== 'undefined' && sanitizedUrl === window.location.origin;
-    
-    if (!isLikelyFirebaseHost && !isSameOrigin) {
-      return sanitizedUrl;
-    }
+  const isLocalhost = typeof window !== 'undefined'
+    && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+
+  // In local testing, prefer explicit dev override; otherwise use same-origin backend.
+  if (isLocalhost) {
+    return devApiUrl || '';
+  }
+
+  const candidate = prodApiUrl || prodFallbackApiUrl;
+  const isLikelyFirebaseHost = /web\.app|firebaseapp\.com/i.test(candidate);
+  const isSameOrigin = typeof window !== 'undefined' && candidate === window.location.origin;
+
+  // Never call Firebase hosting as API backend in production.
+  if (isLikelyFirebaseHost || isSameOrigin) {
     return prodFallbackApiUrl;
   }
 
-  return prodFallbackApiUrl;
+  return candidate;
 };
 
 const MAX_IMAGE_DIMENSION = 1600;
