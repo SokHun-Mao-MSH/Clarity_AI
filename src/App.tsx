@@ -51,6 +51,33 @@ const LANGUAGES = [
 const OUTPUT_LANGUAGES = [
   'English', 'Khmer'
 ];
+ 
+const DEFAULT_PROD_API_URL = 'https://code-clarity-api.onrender.com';
+
+const resolveApiBaseUrl = (): string => {
+  const sanitize = (value: string) => value.replace(/\/+$/, '');
+
+  if (import.meta.env.PROD) {
+    return sanitize(DEFAULT_PROD_API_URL);
+  }
+
+  if (import.meta.env.DEV) {
+    const devApiUrl = import.meta.env.VITE_API_URL_DEV?.trim() || '';
+    return sanitize(devApiUrl);
+  }
+
+  const prodApiUrl = sanitize(import.meta.env.VITE_API_URL?.trim() || '');
+  const prodFallbackApiUrl = sanitize(
+    import.meta.env.VITE_API_URL_FALLBACK?.trim() || DEFAULT_PROD_API_URL,
+  );
+
+  if (!prodApiUrl) {
+    return prodFallbackApiUrl;
+  }
+
+  const isLikelyFirebaseHost = /web\.app|firebaseapp\.com/i.test(prodApiUrl);
+  return isLikelyFirebaseHost ? prodFallbackApiUrl : prodApiUrl;
+};
 
 const MAX_IMAGE_DIMENSION = 1600;
 const MAX_IMAGE_FILE_SIZE_BYTES = 15 * 1024 * 1024;
@@ -352,10 +379,7 @@ export default function App() {
     }, 1500);
 
     try {
-      const prodApiUrl = import.meta.env.VITE_API_URL?.trim() || '';
-      const devApiUrl = import.meta.env.VITE_API_URL_DEV?.trim() || '';
-      const apiUrlRaw = import.meta.env.DEV ? devApiUrl : prodApiUrl;
-      const apiUrl = apiUrlRaw.replace(/\/+$/, '');
+      const apiUrl = resolveApiBaseUrl();
       const endpoint = apiUrl ? `${apiUrl}/api/explain` : '/api/explain';
 
       if (import.meta.env.PROD && !apiUrl) {
@@ -376,6 +400,7 @@ export default function App() {
           mimeType: selectedImage?.mimeType
         }),
       });
+      const contentType = response.headers.get('content-type') || '';
 
       if (!response.ok) {
         let errorMessage = 'Network response was not ok';
@@ -383,9 +408,15 @@ export default function App() {
           const errorData = await response.json();
           errorMessage = errorData?.error || errorMessage;
         } catch {
-          // Keep the default message if body is not JSON.
+          if (contentType.includes('text/html')) {
+            errorMessage = 'API returned HTML instead of JSON. Please check VITE_API_URL points to your Render backend.';
+          }
         }
         throw new Error(errorMessage);
+      }
+
+      if (!contentType.includes('application/json')) {
+        throw new Error('API returned non-JSON response. Please verify VITE_API_URL is your backend URL, not Firebase Hosting URL.');
       }
 
       const data = await response.json();
